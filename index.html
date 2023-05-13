@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+    <head>
+      <style>
+        body{
+          font-size: 18px;
+          font-family: Verdana, sans-serif;
+        }
+        #map{
+          width: 1000px;
+          height: 500px;
+        }
+        legend{
+          font-size: 1.3em;
+          background: #000;
+          color: #fff;
+          border-radius: 5px;
+          padding: 0px 5px;
+        }
+        fieldset{
+          border-radius: 5px;
+        }
+        input, select{
+          padding: 5px;
+          font-size: 16px;
+        }
+      </style>
+        <title>Maps API Solution</title>
+        
+        <script src="https://maps.googleapis.com/maps/api/js?key=__API__KEY__&callback=initMap&v=weekly"
+      defer></script>
+    </head>
+    <body>
+        <div id="map"></div>
+        <section>
+          <fieldset id="route">
+            <legend>Search a Route</legend>
+            <label for="from">From</label>
+            <input type="text" id="from" placeholder="A">
+
+            <label for="to">To</label>
+            <input type="text" id="to" placeholder="B">
+            
+            <label for="by">By</label>
+            <select id="by">
+              <option value="DRIVING" default>Driving</option>
+              <option value="WALKING">Walking</option>
+              <option value="BICYCLING">Bicycling</option>
+              <option value="TRANSIT">Public Transport</option>
+            </select>
+
+            <input type="button" value="Go" onclick="route()">
+          </fieldset>
+          <fieldset id="search">
+            <legend>Search for an Address</legend>
+            <label for="location">Search for</label>
+            <input type="text" id="location" placeholder="Somewhere nice...">
+            <input type="button" value="Search" onclick="search()">
+          </fieldset>
+          <fieldset id="rectangle">
+            <legend>Create a Rectangle</legend>
+            <label for="north">North</label>
+            <input type="text" id="north">
+            
+            <label for="south">South</label>
+            <input type="text" id="south">
+            <br>
+            <label for="east">East</label>
+            <input type="text" id="east">
+            
+            <label for="west">West</label>
+            <input type="text" id="west">
+            <input type="button" value="Create" onclick="makeRect()">
+          </fieldset>
+          <fieldset id="circle">
+            <legend>Create a Circle</legend>
+            <label for="longitude">Longitude</label>
+            <input type="text" id="longitude">
+
+            <label for="latitude">Latitude</label>
+            <input type="text" id="latitude">
+            
+            <label for="radius">Radius</label>
+            <input type="text" id="radius">
+            <input type="button" value="Create" onclick="makeCircle()">
+          </fieldset>
+          <fieldset>
+            <legend>Create a Poly-line</legend>
+
+            <input type="button" value="Go">
+          </fieldset>
+        </section>
+    </body>
+    <script>
+      var directionsService;
+      var directionsRenderer;
+      var geocoder;
+      var map;
+
+      let COORDS = { lat: 37.422019, lng: -122.0841613 };
+      function initMap(){
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer();
+        geocoder = new google.maps.Geocoder();
+
+        map = new google.maps.Map(document.querySelector('#map'), {
+          zoom: 13,
+          center: COORDS, // Google HQ
+          mapTypeId: 'terrain'
+        })
+
+        directionsRenderer.setMap(map);
+      }
+
+      function route(){
+        var start = document.querySelector("#route #from").value;
+        var end = document.querySelector("#route #to").value;
+        var travel = document.querySelector("#route #by").value;
+        console.log(`ROUTE from ${start} to ${end} via ${travel}`)
+        var request = {
+          origin: start,
+          destination: end,
+          travelMode: travel,
+        }
+        directionsService.route(request, (result, status) => {
+          if(status == "OK"){
+            directionsRenderer.setDirections(result);
+          } else {alert("Couldn't get route")}
+        })
+      } 
+
+      function search(){
+        var address = document.querySelector('#search #location').value;
+        console.log(`SEARCH for ${address}`)
+        geocoder.geocode({ 'address': address }, function (results, status) {
+          if (status == 'OK') {
+              map.setCenter(results[0].geometry.location);
+              var marker = new google.maps.Marker({
+                  map: map,
+                      position: results[0].geometry.location
+                  });
+                  COORDS = {lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()}
+                  console.log(COORDS)
+              } else {
+                  alert('Geocode was not successful for the following reason: ' + status);
+              }
+          });
+      }
+      function makeRect(){
+        console.log(`RECTANGLE`)
+        const nInput = parseFloat(document.querySelector("#rectangle #north").value);
+        const sInput = parseFloat(document.querySelector("#rectangle #south").value);
+        const eInput = parseFloat(document.querySelector("#rectangle #east").value);
+        const wInput = parseFloat(document.querySelector("#rectangle #west").value);
+
+        let bounds = {}
+        if (!(nInput && sInput && eInput && wInput)){
+          bounds = {
+            north: map.center.lat() -0.01,
+            south: map.center.lat() +0.01,
+            east: map.center.lng() +0.01,
+            west: map.center.lng() -0.01,
+          }
+        } else {
+          bounds = {
+            north: nInput,
+            south: sInput,
+            east: eInput,
+            west: wInupt,
+          }
+        }
+
+        const rectangle = new google.maps.Rectangle({
+          strokeColor: "#FF0000",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: "#FF0000",
+          fillOpacity: 0.35,
+          map,
+          bounds,
+        });
+      }
+      function makeCircle(){
+        console.log(`CIRCLE`);
+        let coordinates = {lat: map.center.lat(), lng: map.center.lng()}
+        const longInput = parseFloat(document.querySelector("#circle #longitude").value);
+        const latInput = parseFloat(document.querySelector("#circle #latitude").value);
+        const radius = parseFloat(document.querySelector("#circle #radius").value);
+
+        if(longInput && latInput){
+          coordinates = {lat:latInput, lng:longInput}
+        }
+        
+        const circle = new google.maps.Circle({
+          strokeColor: "blue",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: "#FFF",
+          fillOpacity: 0.5,
+          map,
+          center: coordinates,
+          radius,
+        });
+      }
+
+    </script>
+</html>
